@@ -1,3 +1,5 @@
+Based on [docker_open5gs](https://github.com/herlesupreeth/docker_open5gs) repository.
+
 # Each service's dependencies, initialization steps before execution.
 
 ## Metrics
@@ -10,7 +12,7 @@ No dependencies
 ### Execution
 run prometheus binary with configuration located in above config folder.
 
-## Osmohlr -> OK
+## Osmohlr
 ### Dependencies
 Volume to store its generated database.
 ### Initialization
@@ -20,7 +22,7 @@ run osmo-hlr binary with configuration located in "/etc/osmocom".
 ### Notes
 1. Need to add 'l' flag to specify the database path of volume attached.
 
-## Osmomsc -> OK
+## Osmomsc
 ### Dependencies
 Volume to store its generated database.
 ### Initialization
@@ -30,7 +32,7 @@ run osmo-msc binary with configuration located in "/etc/osmocom".
 ### Notes
 1. Need to add 'l' flag to specify the database path of volume attached.
 
-## Smsc -> OK
+## Smsc
 ### Dependencies
 1. internal/external mysql service
 ### Initialization
@@ -42,7 +44,7 @@ run osmo-msc binary with configuration located in "/etc/osmocom".
 ### Execution
 run the service with "kamailio -f /etc/kamailio_smsc/kamailio_smsc.cfg -P /kamailio_smsc.pid -DD -E -e"
 
-## Pcscf -> OK
+## Pcscf
 ### Dependencies
 1. internal/external mysql service
 2. rtpengine service
@@ -64,7 +66,7 @@ sh -c "echo 1 > /proc/sys/net/ipv6/ip_nonlocal_bind"
 ### Execution
 run the service with "kamailio -f /etc/kamailio_pcscf/kamailio_pcscf.cfg -P /kamailio_pcscf.pid -DD -E -e"
 
-## Scscf -> OK
+## Scscf
 ### Dependencies
 1. internal/external mysql service
 2. pyhss service
@@ -78,7 +80,7 @@ run the service with "kamailio -f /etc/kamailio_pcscf/kamailio_pcscf.cfg -P /kam
 ### Execution
 run the service with "kamailio -f /etc/kamailio_scscf/kamailio_scscf.cfg -P /kamailio_scscf.pid -DD -E -e"
 
-## Icscf -> OK
+## Icscf
 ### Dependencies
 1. internal/external mysql service
 2. pyhss service
@@ -92,7 +94,7 @@ run the service with "kamailio -f /etc/kamailio_scscf/kamailio_scscf.cfg -P /kam
 ### Execution
 run the service with "kamailio -f /etc/kamailio_icscf/kamailio_icscf.cfg -P /kamailio_icscf.pid -DD -E -e"
 
-## Pyhss -> OK
+## Pyhss
 ### Dependencies
 1. mysql service
 ### Initialization
@@ -103,7 +105,7 @@ run the service with "kamailio -f /etc/kamailio_icscf/kamailio_icscf.cfg -P /kam
 ### Execution
 run "/pyhss/hss.py"
 
-## Rtpengine -> OK
+## Rtpengine
 ### Dependencies
 No dependencies
 ### Initialization
@@ -113,7 +115,7 @@ No dependencies
 ### Execution
 run binary with populated options.
 
-## Pcrf -> OK
+## Pcrf
 ### Dependencies
 1. Mongo
 ### Initialization
@@ -123,7 +125,7 @@ run binary with populated options.
 ### Execution
 run binary in "/open5gs/install/bin/open5gs-pcrfd"
 
-## Mme -> OK
+## Mme
 ### Dependencies
 1. Hss
 2. Sgwc
@@ -138,7 +140,7 @@ run binary in "/open5gs/install/bin/open5gs-pcrfd"
 ### Execution
 run binary in "/open5gs/install/bin/open5gs-mmed"
 
-## Upf -> OK
+## Upf
 ### Dependencies
 1. Smf
 2. Adding below snippets in spec of k8s deployment object.
@@ -155,7 +157,7 @@ securityContext:
 ### Execution
 run binary in "/open5gs/install/bin/open5gs-upfd"
 
-## Smf -> OK
+## Smf
 ### Dependencies
 1. Pcscf
 ### Initialization
@@ -167,7 +169,7 @@ run binary in "/open5gs/install/bin/open5gs-upfd"
 ### Execution
 run binary in "/open5gs/install/bin/open5gs-smfd"
 
-## Sgwu -> OK
+## Sgwu
 ### Dependencies
 1. Smf
 2. Upf
@@ -177,7 +179,7 @@ run binary in "/open5gs/install/bin/open5gs-smfd"
 ### Execution
 run binary in "/open5gs/install/bin/open5gs-sgwud"
 
-## Sgwc -> OK
+## Sgwc
 ### Dependencies
 1. Smf
 2. Upf
@@ -187,7 +189,7 @@ run binary in "/open5gs/install/bin/open5gs-sgwud"
 ### Execution
 run binary in "/open5gs/install/bin/open5gs-sgwcd"
 
-## Hss -> OK
+## Hss
 ### Dependencies
 1. internal/external mongo service
 ### Initialization
@@ -197,7 +199,7 @@ run binary in "/open5gs/install/bin/open5gs-sgwcd"
 ### Execution
 run binary in "/open5gs/install/bin/open5gs-hssd"
 
-## Webui -> OK
+## Webui
 ### Dependencies
 1. internal/external mongo service
 ### Initialization
