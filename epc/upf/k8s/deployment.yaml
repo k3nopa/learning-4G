@@ -1,0 +1,106 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epc-upf
+  namespace: epc-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epc-upf
+  template:
+    metadata:
+      labels:
+        app: epc-upf
+    spec:
+      containers:
+      - name: epc-upf
+        image: k3d-registry.localhost:5000/open5gs-upf:latest
+        volumeMounts:
+        - name: config
+          mountPath: /config/upf.yaml
+          subPath: upf.yaml
+        - name: log
+          mountPath: /open5gs/install/var/log/open5gs/
+        ports:
+        - name: udp-port-1
+          containerPort: 8805
+          protocol: UDP
+        - name: udp-port-2
+          containerPort: 2152
+          protocol: UDP
+        - name: tcp-port-1
+          containerPort: 9091
+      securityContext:
+        sysctls:
+        - name: net.ipv4.ip_forward
+          value: "1"
+      volumes:
+      - name: config
+        configMap:
+          name: epc-upf-cm
+      - name: log
+        emptyDir:
+          sizeLimit: 500Mi
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: epc-upf-svc
+  namespace: epc-ns
+spec:
+  selector:
+    app: epc-upf
+  ports:
+  - name: udp-port-1
+    targetPort: 8805
+    port: 8805
+    protocol: UDP
+  - name: udp-port-2
+    targetPort: 2152
+    port: 2152
+    protocol: UDP
+  - name: tcp-port-1
+    targetPort: 9091
+    port: 9091
+
+--- # ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epc-upf-cm
+  namespace: epc-ns
+data:   
+  upf.yaml: |
+    logger:
+      file: /open5gs/install/var/log/open5gs/upf.log
+      level: debug
+    parameter:
+    upf:
+        pfcp:
+          - dev: eth0
+        gtpu:
+          - dev: eth0
+            advertise: epc-smf-svc.epc-ns.svc.cluster.local
+        subnet:
+          - addr: UE_IPV4_INTERNET_TUN_IP
+            dev: ogstun
+            dnn: internet
+          - addr: 2001:230:cafe::1/48
+            dev: ogstun
+            dnn: internet
+          - addr: UE_IPV4_IMS_TUN_IP
+            dnn: ims
+            dev: ogstun2
+          - addr: 2001:230:babe::1/48
+            dnn: ims
+            dev: ogstun2
+        metrics:
+          - dev: eth0
+            port: 9091
+    smf:
+        pfcp:
+          server:
+            - dev: eth0

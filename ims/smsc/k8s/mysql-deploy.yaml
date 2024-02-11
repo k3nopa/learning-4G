@@ -1,0 +1,49 @@
+--- # MYSQL Deployment 
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: smsc-mysql
+  namespace: smsc-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smsc-mysql
+  serviceName: "smsc-mysql"
+  template:
+    metadata:
+      labels:
+        app: smsc-mysql
+    spec:
+      containers:
+      - name: smsc-mysql
+        image: k3d-registry.localhost:5000/mysql
+        ports:
+        - name: tcp-port
+          containerPort: 3306
+        # volumeMounts:
+        # - name: db
+        #   mountPath: /var/lib/mysql
+    # volumeClaimTemplates:
+    # - metadata:
+    #     name: db
+    #   spec:
+    #     accessModes: [ "ReadWriteOnce" ]
+    #     storageClassName: "longhorn"
+    #     resources:
+    #       requests:
+    #         storage: 1Gi
+
+--- # MYSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: smsc-mysql-svc
+  namespace: smsc-ns
+spec:
+  selector:
+    app: smsc-mysql
+  ports:
+  - name: tcp-port
+    port: 3306
+    targetPort: 3306

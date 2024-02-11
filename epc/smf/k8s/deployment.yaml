@@ -1,0 +1,185 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epc-smf
+  namespace: epc-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epc-smf
+  template:
+    metadata:
+      labels:
+        app: epc-smf
+    spec:
+      containers:
+      - name: epc-smf
+        image: k3d-registry.localhost:5000/open5gs-smf:latest
+        volumeMounts:
+        - name: config
+          mountPath: /config/smf.conf
+          subPath: smf.conf
+        - name: config
+          mountPath: /config/smf.yaml
+          subPath: smf.yaml
+        - name: log
+          mountPath: /open5gs/install/var/log/open5gs/
+        ports:
+        - name: udp-port-1
+          containerPort: 3868
+          protocol: UDP
+        - name: sctp-port-1
+          containerPort: 3868
+          protocol: SCTP
+        - name: tcp-port-1
+          containerPort: 3868
+        - name: udp-port-2
+          containerPort: 5868
+          protocol: UDP
+        - name: sctp-port-2
+          containerPort: 5868
+          protocol: SCTP
+        - name: tcp-port-2
+          containerPort: 5868
+        - name: udp-port-3
+          containerPort: 8805
+          protocol: UDP
+        - name: udp-port-4
+          containerPort: 2123
+          protocol: UDP
+        - name: tcp-port-3
+          containerPort: 7777
+        - name: tcp-port-4
+          containerPort: 9091
+      volumes:
+      - name: config
+        configMap:
+          name: epc-smf-cm
+      - name: log
+        emptyDir:
+          sizeLimit: 500Mi
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: epc-smf-svc
+  namespace: epc-ns
+spec:
+  selector:
+    app: epc-smf
+  ports:
+  - name: udp-port-1
+    port: 3868
+    targetPort: 3868
+    protocol: UDP
+  - name: sctp-port-1
+    port: 3868
+    targetPort: 3868
+    protocol: SCTP
+  - name: tcp-port-1
+    port: 3868
+    targetPort: 3868
+  - name: udp-port-2
+    port: 5868
+    targetPort: 5868
+    protocol: UDP
+  - name: sctp-port-2
+    port: 5868
+    targetPort: 5868
+    protocol: SCTP
+  - name: tcp-port-2
+    port: 5868
+    targetPort: 5868
+  - name: udp-port-3
+    port: 8805
+    targetPort: 8805
+    protocol: UDP
+  - name: udp-port-4
+    port: 2123
+    targetPort: 2123
+    protocol: UDP
+  - name: tcp-port-3
+    port: 7777
+    targetPort: 7777
+  - name: tcp-port-4
+    port: 9091
+    targetPort: 9091
+
+--- # ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epc-smf-cm
+  namespace: epc-ns
+data:   
+  smf.conf: |
+    Identity = "smf.epc.mnc001.mcc001.3gppnetwork.org";
+    Realm = "epc.mnc001.mcc001.3gppnetwork.org";
+
+    TLS_Cred = "/open5gs/install/etc/freeDiameter/smf.cert.pem", "/open5gs/install/etc/freeDiameter/smf.key.pem";
+    TLS_CA = "/open5gs/install/etc/freeDiameter/cacert.pem";
+    # The values for each digit are:
+    #  0 - default - keep the default behavior
+    #  1 - quiet   - remove any specific log
+    #  2 - compact - display only a summary of the information
+    #  4 - full    - display the complete information on a single long line
+    #  8 - tree    - display the complete information in an easier to read format spanning several lines.
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dbg_msg_dumps.fdx" : "0x8888";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_rfc5777.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_mip6i.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_nasreq.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_nas_mipv6.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_dcca.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_dcca_3gpp.fdx";
+
+    ConnectPeer = "pcrf.epc.mnc001.mcc001.3gppnetwork.org" { ConnectTo = "epc-pcrf-svc.epc-ns.svc.cluster.local"; Port = 3873; No_TLS; };
+  
+  smf.yaml: |
+    logger:
+      file: /open5gs/install/var/log/open5gs/smf.log
+      level: debug
+    sbi:
+        server:
+          no_tls: true
+        client:
+          no_tls: true
+    parameter:
+        no_ipv4v6_local_addr_in_packet_filter: true
+    smf:
+        freeDiameter: /open5gs/install/etc/freeDiameter/smf.conf
+        gtpc:
+          - dev: eth0
+        gtpu:
+          - dev: eth0
+        pfcp:
+          - dev: eth0
+        subnet:
+          - addr: UE_IPV4_INTERNET_TUN_IP
+            dnn: internet
+            dev: ogstun
+          - addr: 2001:230:cafe::1/48
+            dev: ogstun
+            dnn: internet
+          - addr: UE_IPV4_IMS_TUN_IP
+            dnn: ims
+            dev: ogstun2
+          - addr: 2001:230:babe::1/48
+            dnn: ims
+            dev: ogstun2
+        dns:
+          - 8.8.8.8
+          - 8.8.4.4
+          - 2001:4860:4860::8888
+          - 2001:4860:4860::8844
+        p-cscf:
+          - PCSCF_IP
+        mtu: 1410
+        metrics:
+          - dev: eth0
+            port: 9091
+    upf:
+        pfcp:
+          - addr: UPF_IP 

@@ -1,0 +1,60 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epc-db-ui
+  namespace: subscriber-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epc-db-ui
+  template:
+    metadata:
+      labels:
+        app: epc-db-ui
+    spec:
+      containers:
+      - name: epc-db-ui
+        image: k3d-registry.localhost:5000/open5gs-webui:latest
+        env:
+        - name: DB_URI
+          value: "mongodb://mongo-db-svc/open5gs"
+        ports:
+        - name: webui-port
+          containerPort: 3000
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: epc-db-ui-svc
+  namespace: subscriber-ns
+spec:
+  selector:
+    app: epc-db-ui
+  ports:
+  - name: webui-port
+    port: 3000
+    targetPort: 3000
+
+--- # Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webui-ingress
+  namespace: subscriber-ns
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: webui.homelab.home
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: epc-db-ui-svc
+            port:
+              number: 3000

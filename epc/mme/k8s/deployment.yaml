@@ -1,0 +1,189 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epc-mme
+  namespace: epc-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epc-mme
+  template:
+    metadata:
+      labels:
+        app: epc-mme
+    spec:
+      containers:
+      - name: epc-mme
+        image: k3d-registry.localhost:5000/open5gs-mme:latest
+        volumeMounts:
+        - name: config
+          mountPath: /config/mme.conf
+          subPath: mme.conf
+        - name: config
+          mountPath: /open5gs/install/etc/open5gs/mme.yaml
+          subPath: mme.yaml
+        - name: log
+          mountPath: /open5gs/install/var/log/open5gs/
+        ports:
+          - name: tcp-port-1
+            containerPort: 3868
+          - name: udp-port-1
+            containerPort: 3868
+            protocol: UDP
+          - name: sctp-port-1
+            containerPort: 3868
+            protocol: SCTP
+          - name: tcp-port-2
+            containerPort: 5868
+          - name: udp-port-2
+            containerPort: 5868
+            protocol: UDP
+          - name: sctp-port-2
+            containerPort: 5868
+            protocol: SCTP
+          - name: tcp-port-3
+            containerPort: 9091
+          - name: udp-port-3
+            containerPort: 2123
+            protocol: UDP
+          - name: sctp-port-3
+            containerPort: 36412
+            protocol: SCTP
+      volumes:
+      - name: config
+        configMap:
+          name: epc-mme-cm
+      - name: log
+        emptyDir:
+          sizeLimit: 500Mi
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: epc-mme-svc
+  namespace: epc-ns
+spec:
+  selector:
+    app: epc-mme
+  ports:
+  - name: tcp-port-1
+    port: 3868
+    targetPort: 3868
+  - name: udp-port-1
+    port: 3868
+    targetPort: 3868
+    protocol: UDP
+  - name: sctp-port-1
+    port: 3868
+    targetPort: 3868
+    protocol: SCTP
+  - name: tcp-port-2
+    port: 5868
+    targetPort: 5868
+  - name: udp-port-2
+    port: 5868
+    targetPort: 5868
+    protocol: UDP
+  - name: sctp-port-2
+    port: 5868
+    targetPort: 5868
+    protocol: SCTP
+  - name: tcp-port-3
+    port: 9091
+    targetPort: 9091
+  - name: udp-port-3
+    port: 2123
+    targetPort: 2123
+    protocol: UDP
+  - name: sctp-port-3
+    port: 36412
+    targetPort: 36412
+    protocol: SCTP
+
+--- # ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epc-mme-cm
+  namespace: epc-ns
+data:   
+  mme.yaml: |
+   logger:
+    level: debug
+    domain: mme,emm
+    file: /open5gs/install/var/log/open5gs/mme.log
+    parameter:
+    mme:
+        freeDiameter: /open5gs/install/etc/freeDiameter/mme.conf
+        s1ap:
+          dev: eth0
+        gtpc:
+          dev: eth0
+        sgsap:
+          addr: OSMOMSC_IP
+          map:
+            tai:
+              plmn_id:
+                mcc: 001
+                mnc: 01
+              tac: 1
+            lai:
+              plmn_id:
+                mcc: 001
+                mnc: 01
+              lac: 1
+        gummei: 
+          plmn_id:
+            mcc: 001
+            mnc: 01
+          mme_gid: 2
+          mme_code: 1
+        tai:
+          plmn_id:
+            mcc: 001
+            mnc: 01
+          tac: 1
+        security:
+            integrity_order : [ EIA2, EIA1, EIA0 ]
+            ciphering_order : [ EEA0, EEA1, EEA2 ]
+        network_name:
+            full: Open5GS
+        mme_name: open5gs-mme0
+        metrics:
+          - dev: eth0
+            port: 9091
+    sgwc:
+        gtpc:
+          addr: SGWC_IP
+    smf:
+        gtpc:
+          - addr:
+            - SMF_IP
+    time:
+      t3412:
+        value: 540
+  
+  mme.conf: |
+    Identity = "mme.epc.mnc001.mcc001.3gppnetwork.org";
+    Realm = "epc.mnc001.mcc001.3gppnetwork.org";
+    TLS_Cred = "/open5gs/install/etc/freeDiameter/mme.cert.pem", "/open5gs/install/etc/freeDiameter/mme.key.pem";
+    TLS_CA = "/open5gs/install/etc/freeDiameter/cacert.pem";
+    # The four digits respectively control: connections, routing decisions, sent/received messages, errors.
+    # The values for each digit are:
+    #  0 - default - keep the default behavior
+    #  1 - quiet   - remove any specific log
+    #  2 - compact - display only a summary of the information
+    #  4 - full    - display the complete information on a single long line
+    #  8 - tree    - display the complete information in an easier to read format spanning several lines.
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dbg_msg_dumps.fdx" : "0x8888";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_rfc5777.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_mip6i.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_nasreq.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_nas_mipv6.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_dcca.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_dcca_3gpp.fdx";
+
+    ConnectPeer = "hss.epc.mnc001.mcc001.3gppnetwork.org" { ConnectTo = "epc-hss-svc.subscriber-ns.svc.cluster.local"; Port = 3868; No_TLS; };

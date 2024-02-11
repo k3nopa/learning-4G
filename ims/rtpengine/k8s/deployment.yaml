@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ims-rtpengine
+  namespace: ims-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ims-rtpengine
+  template:
+    metadata:
+      labels:
+        app: ims-rtpengine
+    spec:
+      containers:
+      - name: ims-rtpengine
+        image: k3d-registry.localhost:5000/rtpengine:latest
+        securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+        env: 
+        - name: TABLE
+          value: "0"
+        - name: INTERFACE
+          value: "127.0.0.1"
+        - name: LISTEN_NG
+          value: "127.0.0.1:2223"
+        - name: PIDFILE
+          value: "/run/ngcp-rtpengine-daemon.pid"
+        - name: PORT_MAX
+          value: "49002"
+        - name: PORT_MIN
+          value: "49000"
+        - name: NO_FALLBACK
+          value: "no"
+        - name: TOS
+          value: "184"
+        ports:
+        - name: udp-port-1
+          containerPort: 2223
+          protocol: UDP
+        - name: udp-port-2
+          containerPort: 49000
+          protocol: UDP
+        - name: udp-port-3
+          containerPort: 49001
+          protocol: UDP
+        - name: udp-port-4
+          containerPort: 49002
+          protocol: UDP
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ims-rtpengine-svc
+  namespace: ims-ns
+spec:
+  selector:
+    app: ims-rtpengine
+  ports:
+  - name: udp-port-1
+    port: 7090
+    targetPort: 7090
+    protocol: UDP
+  - name: udp-port-2
+    port: 49000
+    targetPort: 49000
+    protocol: UDP
+  - name: udp-port-3
+    port: 49001
+    targetPort: 49001
+    protocol: UDP
+  - name: udp-port-4
+    port: 49002
+    targetPort: 49002
+    protocol: UDP

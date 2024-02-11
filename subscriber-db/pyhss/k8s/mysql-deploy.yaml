@@ -1,0 +1,49 @@
+--- # MYSQL Deployment 
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pyhss-mysql
+  namespace: subscriber-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pyhss-mysql
+  serviceName: "pyhss-mysql"
+  template:
+    metadata:
+      labels:
+        app: pyhss-mysql
+    spec:
+      containers:
+      - name: pyhss-mysql
+        image: k3d-registry.localhost:5000/mysql
+        ports:
+        - name: tcp-port
+          containerPort: 3306
+        # volumeMounts:
+        # - name: db
+        #   mountPath: /var/lib/mysql
+    # volumeClaimTemplates:
+    # - metadata:
+    #     name: db
+    #   spec:
+    #     accessModes: [ "ReadWriteOnce" ]
+    #     storageClassName: "longhorn"
+    #     resources:
+    #       requests:
+    #         storage: 1Gi
+
+--- # MYSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pyhss-mysql-svc
+  namespace: subscriber-ns
+spec:
+  selector:
+    app: pyhss-mysql
+  ports:
+  - name: tcp-port
+    port: 3306
+    targetPort: 3306

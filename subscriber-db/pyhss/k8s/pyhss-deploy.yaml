@@ -1,0 +1,83 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ims-pyhss
+  namespace: subscriber-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ims-pyhss
+  template:
+    metadata:
+      labels:
+        app: ims-pyhss
+    spec:
+      initContainers:
+      - name: init-pyhss-mysql
+        image: k3d-registry.localhost:5000/init-pyhss-mysql
+      containers:
+      - name: ims-pyhss
+        image: k3d-registry.localhost:5000/pyhss:latest
+        volumeMounts:
+        - name: log
+          mountPath: /pyhss/log/
+        ports:
+        - name: udp-port-1
+          containerPort: 3868
+          protocol: UDP
+        - name: tcp-port-1
+          containerPort: 3868
+        - name: udp-port-2
+          containerPort: 5868
+          protocol: UDP
+        - name: tcp-port-2
+          containerPort: 8080
+      volumes:
+      - name: log
+        emptyDir:
+          sizeLimit: 500Mi
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ims-pyhss-svc
+  namespace: subscriber-ns
+spec:
+  selector:
+    app: ims-pyhss
+  ports:
+  - name: udp-port-1
+    port: 3868
+    targetPort: 3868
+    protocol: UDP
+  - name: tcp-port-1
+    port: 3868
+    targetPort: 3868
+    protocol: SCTP
+  - name: tcp-port-2
+    port: 8080
+    targetPort: 8080
+
+--- # Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pyhss-openapi-ingress
+  namespace: subscriber-ns
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: pyhss.homelab.home
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ims-pyhss-svc
+            port:
+              number: 8080

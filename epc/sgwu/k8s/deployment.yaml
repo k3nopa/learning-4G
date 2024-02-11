@@ -1,0 +1,80 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epc-sgwu
+  namespace: epc-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epc-sgwu
+  template:
+    metadata:
+      labels:
+        app: epc-sgwu
+    spec:
+      containers:
+      - name: epc-sgwu
+        image: k3d-registry.localhost:5000/open5gs-sgwu:latest
+        volumeMounts:
+        - name: config
+          mountPath: /open5gs/install/etc/open5gs/sgwu.yaml
+          subPath: sgwu.yaml
+        - name: log
+          mountPath: /open5gs/install/var/log/open5gs/
+        ports:
+        - name: udp-port-1
+          containerPort: 8805
+          protocol: UDP
+        - name: udp-port-2
+          containerPort: 2152
+          protocol: UDP
+      volumes:
+      - name: config
+        configMap:
+          name: epc-sgwu-cm
+      - name: log
+        emptyDir:
+          sizeLimit: 500Mi
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: epc-sgwu-svc
+  namespace: epc-ns
+spec:
+  selector:
+    app: epc-sgwu
+  ports:
+  - name: udp-port-1
+    targetPort: 8805
+    port: 8805
+    protocol: UDP
+  - name: udp-port-2
+    targetPort: 2152
+    port: 2152
+    protocol: UDP
+
+--- # ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epc-sgwu-cm
+  namespace: epc-ns
+data:   
+  sgwu.yaml: |
+    logger:
+      file: /open5gs/install/var/log/open5gs/sgwu.log
+      level: debug
+    parameter:
+    sgwu:
+        gtpu:
+          - dev: eth0
+            advertise: epc-sgwu-svc.epc-ns.svc.cluster.local
+        pfcp:
+          - dev: eth0
+    sgwc:
+        pfcp:
+          - addr: SGWC_IP

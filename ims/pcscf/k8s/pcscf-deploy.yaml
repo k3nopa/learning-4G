@@ -1,0 +1,90 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ims-pcscf
+  namespace: ims-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ims-pcscf
+  template:
+    metadata:
+      labels:
+        app: ims-pcscf
+    spec:
+      initContainers:
+      - name: init-pcscf-mysql
+        image: k3d-registry.localhost:5000/init-kamailio-pcscf-mysql:latest
+      containers:
+      - name: ims-pcscf
+        image: k3d-registry.localhost:5000/kamailio-pcscf:latest
+        ports:
+        - name: udp-port-1
+          containerPort: 3871
+          protocol: UDP
+        - name: tcp-port-1
+          containerPort: 3871
+          protocol: TCP
+        - name: udp-port-2
+          containerPort: 5060
+          protocol: UDP
+        - name: tcp-port-2
+          containerPort: 5060
+          protocol: TCP
+        - name: udp-port-3
+          containerPort: 5100
+          protocol: UDP
+        - name: tcp-port-3
+          containerPort: 5100
+          protocol: TCP
+         - name: udp-port-4
+          containerPort: 6100
+          protocol: UDP
+        - name: tcp-port-4
+          containerPort: 6100
+          protocol: TCP
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ims-pcscf-svc
+  namespace: ims-ns
+spec:
+  selector:
+    app: ims-pcscf
+  ports:
+  - name: udp-port-1
+    port: 3871
+    targetPort: 3871
+    protocol: UDP
+  - name: tcp-port-1
+    port: 3871
+    targetPort: 3871
+    protocol: TCP
+  - name: udp-port-2
+    port: 5060
+    targetPort: 5060
+    protocol: UDP
+  - name: tcp-port-2
+    port: 5060
+    targetPort: 5060
+    protocol: TCP
+  - name: udp-port-3
+    port: 5100
+    targetPort: 5100
+    protocol: UDP
+  - name: tcp-port-3
+    port: 5100
+    targetPort: 5100
+    protocol: TCP
+    - name: udp-port-4
+    port: 6100
+    targetPort: 6100
+    protocol: UDP
+  - name: tcp-port-4
+    port: 6100
+    targetPort: 6100
+    protocol: TCP

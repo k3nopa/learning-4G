@@ -1,0 +1,62 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ims-scscf
+  namespace: ims-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ims-scscf
+  template:
+    metadata:
+      labels:
+        app: ims-scscf
+    spec:
+      initContainers:
+      - name: init-scscf-mysql
+        image: k3d-registry.localhost:5000/init-kamailio-scscf-mysql:latest
+      containers:
+      - name: ims-scscf
+        image: k3d-registry.localhost:5000/kamailio-scscf:latest
+        ports:
+        - name: udp-port-1
+          containerPort: 3870
+          protocol: UDP
+        - name: tcp-port-1
+          containerPort: 3870
+          protocol: TCP
+        - name: udp-port-2
+          containerPort: 6060
+          protocol: UDP
+        - name: tcp-port-2
+          containerPort: 6060
+          protocol: TCP
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ims-scscf-svc
+  namespace: ims-ns
+spec:
+  selector:
+    app: ims-scscf
+  ports:
+  - name: udp-port-1
+    port: 3870
+    targetPort: 3870
+    protocol: UDP
+  - name: tcp-port-1
+    port: 3870
+    targetPort: 3870
+    protocol: TCP
+  - name: udp-port-2
+    port: 6060
+    targetPort: 6060
+    protocol: UDP
+  - name: tcp-port-2
+    port: 6060
+    targetPort: 6060
+    protocol: TCP

@@ -1,0 +1,12 @@
+logger:
+    file: /open5gs/install/var/log/open5gs/sgwc.log
+    level: debug
+parameter:
+sgwc:
+    gtpc:
+      - dev: eth0
+    pfcp:
+      - dev: eth0
+sgwu:
+    pfcp:
+      - addr: SGWU_IP

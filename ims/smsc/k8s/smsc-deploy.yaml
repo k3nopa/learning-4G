@@ -1,0 +1,47 @@
+--- # SMSC Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ims-smsc
+  namespace: smsc-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ims-smsc
+  template:
+    metadata:
+      labels:
+        app: ims-smsc
+    spec:
+      initContainers:
+      - name: init-smsc-mysql
+        image: k3d-registry.localhost:5000/init-kamailio-smsc-mysql
+      containers:
+      - name: ims-smsc
+        image: k3d-registry.localhost:5000/kamailio-smsc
+        ports:
+        - name: udp-port
+          containerPort: 7090
+          protocol: UDP
+        - name: tcp-port
+          containerPort: 7090
+          protocol: TCP
+
+--- # SMSC Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ims-smsc-svc
+  namespace: smsc-ns
+spec:
+  selector:
+    app: ims-smsc
+  ports:
+  - name: udp-port
+    port: 7090
+    targetPort: 7090
+    protocol: UDP
+  - name: tcp-port
+    port: 7090
+    targetPort: 7090

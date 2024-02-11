@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo-db
+  namespace: subscriber-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo-db
+  serviceName: "mongo-db"
+  template:
+    metadata:
+      labels:
+        app: mongo-db
+    spec:
+      containers:
+      - name: mongo-db
+        image: mongo:6.0
+        ports:
+        - name: tcp-port
+          containerPort: 27017
+        # volumeMounts:
+        # - name: db
+        #   mountPath: /data/db
+        # - name: db
+        #   mountPath: /data/configdb
+    # volumeClaimTemplates:
+    # - metadata:
+    #     name: db
+    #   spec:
+    #     accessModes: [ "ReadWriteOnce" ]
+    #     storageClassName: "longhorn"
+    #     resources:
+    #       requests:
+    #         storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-db-svc
+  namespace: subscriber-ns
+spec:
+  selector:
+    app: mongo-db
+  ports:
+  - name: tcp-port
+    port: 27017
+    targetPort: 27017

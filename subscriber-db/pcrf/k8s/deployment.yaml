@@ -1,0 +1,125 @@
+--- # Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epc-pcrf
+  namespace: subscriber-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: epc-pcrf
+  template:
+    metadata:
+      labels:
+        app: epc-pcrf
+    spec:
+      containers:
+      - name: epc-pcrf
+        image: k3d-registry.localhost:5000/open5gs-pcrf:latest
+        volumeMounts:
+        - name: config
+          mountPath: /config/pcrf.conf
+          subPath: pcrf.conf
+        - name: config
+          mountPath: /open5gs/install/etc/open5gs/pcrf.yaml
+          subPath: pcrf.yaml
+        - name: log
+          mountPath: /open5gs/install/var/log/open5gs/
+        ports:
+        - name: udp-port-1
+          containerPort: 3868
+          protocol: UDP
+        - name: sctp-port-1
+          containerPort: 3868
+          protocol: SCTP
+        - name: tcp-port-1
+          containerPort: 3868
+        - name: udp-port-2
+          containerPort: 5868
+          protocol: UDP
+        - name: sctp-port-2
+          containerPort: 5868
+          protocol: SCTP
+        - name: tcp-port-2
+          containerPort: 5868
+      volumes:
+      - name: config
+        configMap:
+          name: epc-pcrf-cm
+      - name: log
+        emptyDir:
+          sizeLimit: 500Mi
+
+--- # Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: epc-pcrf-svc
+  namespace: subscriber-ns
+spec:
+  selector:
+    app: epc-pcrf
+  ports:
+  - name: udp-port-1
+    port: 3868
+    targetPort: 3868
+    protocol: UDP
+  - name: sctp-port-1
+    port: 3868
+    targetPort: 3868
+    protocol: SCTP
+  - name: tcp-port-1
+    port: 3868
+    targetPort: 3868
+  - name: udp-port-2
+    port: 5868
+    targetPort: 5868
+    protocol: UDP
+  - name: sctp-port-2
+    port: 5868
+    targetPort: 5868
+    protocol: SCTP
+  - name: tcp-port-2
+    port: 5868
+    targetPort: 5868
+
+--- # ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epc-pcrf-cm
+  namespace: subscriber-ns
+data:   
+  pcrf.conf: |
+    Identity = "pcrf.epc.mnc001.mcc001.3gppnetwork.org";
+    Realm = "epc.mnc001.mcc001.3gppnetwork.org";
+    Port = 3873;
+    # Default : listen on all addresses available.
+    TLS_Cred = "/open5gs/install/etc/freeDiameter/pcrf.cert.pem", "/open5gs/install/etc/freeDiameter/pcrf.key.pem";
+    TLS_CA = "/open5gs/install/etc/freeDiameter/cacert.pem";
+
+    # The values for each digit are:
+    #  0 - default - keep the default behavior
+    #  1 - quiet   - remove any specific log
+    #  2 - compact - display only a summary of the information
+    #  4 - full    - display the complete information on a single long line
+    #  8 - tree    - display the complete information in an easier to read format spanning several lines.
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dbg_msg_dumps.fdx" : "0x8888";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_rfc5777.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_mip6i.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_nasreq.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_nas_mipv6.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_dcca.fdx";
+    LoadExtension = "LD_LIBRARY_PATH/freeDiameter/dict_dcca_3gpp.fdx";
+
+    ConnectPeer = "smf.epc.mnc001.mcc001.3gppnetwork.org" { ConnectTo = "epc-smf-svc.epc-ns.svc.cluster.local"; Port = 3868; No_TLS; };
+    ConnectPeer = "pcscf.ims.mnc001.mcc001.3gppnetwork.org" { ConnectTo = "ims-pcscf-svc.ims-ns.svc.cluster.local"; Port = 3871; No_TLS; };
+  
+  pcrf.yaml: |
+    db_uri: mongodb://mongo-db-svc/open5gs
+    logger:
+        file: /open5gs/install/var/log/open5gs/pcrf.log
+    parameter:
+    pcrf:
+        freeDiameter: /open5gs/install/etc/freeDiameter/pcrf.conf
